@@ -1,6 +1,39 @@
 "use client"
 
-// ... (previous imports remain the same)
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useForm } from "react-hook-form"
+import * as z from "zod"
+import { useState } from "react"
+import { formatDistanceToNow, format } from 'date-fns'
+import { ClipboardList, Clock, CheckCircle2, AlertCircle, WrenchIcon, X, Upload } from "lucide-react"
+
+// Import all UI components
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { 
   Accordion,
   AccordionContent,
@@ -10,8 +43,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Progress } from "@/components/ui/progress"
-import { formatDistanceToNow, format } from 'date-fns'
-import { ClipboardList, Clock, CheckCircle2, AlertCircle, WrenchIcon } from "lucide-react"
+import { toast } from "@/hooks/use-toast"
 
 // Enhanced status definitions
 const STATUS_TYPES = {
