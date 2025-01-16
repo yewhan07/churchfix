@@ -4,10 +4,9 @@ import React, { useState } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { formatDistanceToNow, format } from 'date-fns'
-import { ClipboardList, Clock, CheckCircle2, AlertCircle, WrenchIcon, X, Upload } from "lucide-react"
+import { Upload, X } from "lucide-react"
 
-// Import all UI components
+// Import UI components
 import { Button } from "@/components/ui/button"
 import {
   Form,
@@ -34,61 +33,24 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Progress } from "@/components/ui/progress"
 import { toast } from "@/hooks/use-toast"
 
-// Constants and mock data
+// Constants
+const MAX_FILE_SIZE = 5 * 1024 * 1024
+const ACCEPTED_FILE_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "video/mp4",
+  "video/quicktime"
+]
+
 const FLOOR_OPTIONS = [
   { value: "ground", label: "Ground Floor" },
   { value: "first", label: "1st Floor" },
   { value: "second", label: "2nd Floor" },
 ]
-
-const STATUS_TYPES = {
-  SUBMITTED: {
-    value: "submitted",
-    label: "Submitted",
-    color: "bg-blue-100 text-blue-800",
-    icon: ClipboardList,
-    progress: 20
-  },
-  REVIEWING: {
-    value: "reviewing",
-    label: "Under Review",
-    color: "bg-purple-100 text-purple-800",
-    icon: Clock,
-    progress: 40
-  },
-  IN_PROGRESS: {
-    value: "in-progress",
-    label: "In Progress",
-    color: "bg-yellow-100 text-yellow-800",
-    icon: WrenchIcon,
-    progress: 60
-  },
-  PENDING_VERIFICATION: {
-    value: "pending-verification",
-    label: "Pending Verification",
-    color: "bg-orange-100 text-orange-800",
-    icon: AlertCircle,
-    progress: 80
-  },
-  COMPLETED: {
-    value: "completed",
-    label: "Completed",
-    color: "bg-green-100 text-green-800",
-    icon: CheckCircle2,
-    progress: 100
-  }
-}
 
 // Form validation schema
 const maintenanceFormSchema = z.object({
@@ -116,66 +78,7 @@ const maintenanceFormSchema = z.object({
     .optional(),
 })
 
-// Mock data
-const MOCK_REQUESTS = [
-  {
-    id: 1,
-    location: "Ground Floor",
-    description: "Broken light fixture in the main entrance",
-    currentStatus: "in-progress",
-    statusHistory: [
-      {
-        status: "submitted",
-        timestamp: new Date(2024, 1, 15, 9, 30),
-        note: "Maintenance request submitted"
-      },
-      {
-        status: "reviewing",
-        timestamp: new Date(2024, 1, 15, 10, 15),
-        note: "Request under review by maintenance team"
-      },
-      {
-        status: "in-progress",
-        timestamp: new Date(2024, 1, 15, 14, 0),
-        note: "Electrician assigned and working on the issue"
-      }
-    ],
-    createdAt: new Date(2024, 1, 15, 9, 30),
-    estimatedCompletion: new Date(2024, 1, 16, 17, 0),
-    priority: "high",
-    assignedTo: "John Smith",
-    attachments: 2,
-    submittedBy: "Anonymous"
-  },
-  {
-    id: 2,
-    location: "1st Floor",
-    description: "Water leak in bathroom",
-    currentStatus: "reviewing",
-    statusHistory: [
-      {
-        status: "submitted",
-        timestamp: new Date(2024, 1, 14, 15, 0),
-        note: "Maintenance request submitted"
-      },
-      {
-        status: "reviewing",
-        timestamp: new Date(2024, 1, 14, 16, 30),
-        note: "Plumber scheduled for inspection"
-      }
-    ],
-    createdAt: new Date(2024, 1, 14, 15, 0),
-    estimatedCompletion: new Date(2024, 1, 15, 17, 0),
-    priority: "medium",
-    assignedTo: "Mike Johnson",
-    attachments: 1,
-    submittedBy: "John Doe"
-  }
-]
-
 export default function MaintenanceForm() {
-  // Initialize state with mock data
-  const [requests, setRequests] = useState(MOCK_REQUESTS)
   const [filePreview, setFilePreview] = useState([])
 
   const form = useForm({
@@ -190,7 +93,31 @@ export default function MaintenanceForm() {
     },
   })
 
-  // ... (previous handlers remain the same)
+  const handleFileChange = (e, field) => {
+    const files = Array.from(e.target.files)
+    field.onChange(files)
+    
+    const newPreviews = files.map(file => ({
+      url: URL.createObjectURL(file),
+      type: file.type,
+      name: file.name
+    }))
+    
+    filePreview.forEach(preview => URL.revokeObjectURL(preview.url))
+    setFilePreview(newPreviews)
+  }
+
+  const removeFile = (index, field) => {
+    const currentFiles = field.value
+    const newFiles = [...currentFiles]
+    newFiles.splice(index, 1)
+    field.onChange(newFiles)
+
+    URL.revokeObjectURL(filePreview[index].url)
+    const newPreviews = [...filePreview]
+    newPreviews.splice(index, 1)
+    setFilePreview(newPreviews)
+  }
 
   async function onSubmit(values) {
     try {
@@ -199,29 +126,7 @@ export default function MaintenanceForm() {
         description: "Please wait while we process your submission.",
       })
 
-      // Create new request object
-      const newRequest = {
-        id: requests.length + 1,
-        location: FLOOR_OPTIONS.find(opt => opt.value === values.location)?.label,
-        description: values.description,
-        currentStatus: "submitted",
-        statusHistory: [
-          {
-            status: "submitted",
-            timestamp: new Date(),
-            note: "Maintenance request submitted"
-          }
-        ],
-        createdAt: new Date(),
-        estimatedCompletion: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours from now
-        priority: "medium",
-        assignedTo: "Pending Assignment",
-        attachments: values.files?.length || 0,
-        submittedBy: values.isAnonymous ? "Anonymous" : (values.name || "Anonymous")
-      }
-
-      // Update requests list
-      setRequests(prev => [newRequest, ...prev])
+      console.log(values)
 
       toast({
         title: "Request Submitted Successfully",
@@ -244,36 +149,205 @@ export default function MaintenanceForm() {
 
   return (
     <main className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="container mx-auto max-w-3xl">
-        {/* Maintenance Request Form */}
-        <Card className="shadow-lg mb-8">
-          {/* ... (form JSX remains the same) ... */}
-        </Card>
-
-        {/* Previous Maintenance Requests */}
+      <div className="container mx-auto max-w-2xl">
         <Card className="shadow-lg">
           <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-2xl font-bold">
-              Request History
+            <CardTitle className="text-3xl font-bold">
+              Maintenance Request
             </CardTitle>
             <p className="text-gray-500">
-              Track and monitor your maintenance requests
+              Submit your maintenance or repair request below
             </p>
           </CardHeader>
           <CardContent>
-            {requests.length === 0 ? (
-              <div className="text-center py-6 text-gray-500">
-                No maintenance requests yet
-              </div>
-            ) : (
-              <Accordion type="single" collapsible className="w-full">
-                {requests.map((request) => (
-                  <AccordionItem key={request.id} value={`item-${request.id}`}>
-                    {/* ... (accordion content remains the same) ... */}
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            )}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location *</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a floor" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {FLOOR_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        Select the floor where the issue is located
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Issue Description *</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Please describe the issue in detail..."
+                          className="min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="isAnonymous"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                      <div className="space-y-0.5">
+                        <FormLabel className="text-base">
+                          Submit Anonymously
+                        </FormLabel>
+                        <FormDescription>
+                          Toggle if you prefer to remain anonymous
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                {!form.watch("isAnonymous") && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Your name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Contact Number</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Your phone number" 
+                              type="tel"
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Format: +1234567890 or 1234567890
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="files"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Upload Photos or Videos</FormLabel>
+                      <FormControl>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-center w-full">
+                            <label
+                              htmlFor="file-upload"
+                              className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                            >
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <Upload className="h-6 w-6 mb-2" />
+                                <p className="mb-2 text-sm text-gray-500">
+                                  <span className="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  Images (JPG, PNG, WebP) or Videos (MP4) up to 5MB
+                                </p>
+                              </div>
+                              <Input
+                                id="file-upload"
+                                type="file"
+                                className="hidden"
+                                multiple
+                                accept={ACCEPTED_FILE_TYPES.join(",")}
+                                onChange={(e) => handleFileChange(e, field)}
+                              />
+                            </label>
+                          </div>
+
+                          {filePreview.length > 0 && (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                              {filePreview.map((file, index) => (
+                                <div key={index} className="relative group">
+                                  {file.type.startsWith('image/') ? (
+                                    <img
+                                      src={file.url}
+                                      alt={`Preview ${index + 1}`}
+                                      className="h-24 w-full object-cover rounded-lg"
+                                    />
+                                  ) : (
+                                    <video
+                                      src={file.url}
+                                      className="h-24 w-full object-cover rounded-lg"
+                                    />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFile(index, field)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                  <p className="text-xs mt-1 truncate">{file.name}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormDescription>
+                        Upload photos or videos to help us better understand the issue
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="flex justify-end">
+                  <Button type="submit" size="lg">
+                    Submit Request
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>
