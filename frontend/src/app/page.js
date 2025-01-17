@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import * as z from "zod"
-import { Upload, X } from "lucide-react"
+import { Upload, X, History } from "lucide-react"
 
 // Import UI components
 import { Button } from "@/components/ui/button"
@@ -151,10 +151,21 @@ export default function MaintenanceForm() {
     <main className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="container mx-auto max-w-2xl">
         <Card className="shadow-lg">
-          <CardHeader className="text-center space-y-2">
-            <CardTitle className="text-3xl font-bold">
-              Maintenance Request
-            </CardTitle>
+          <CardHeader className="space-y-2">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-3xl font-bold">
+                Maintenance Request
+              </CardTitle>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex items-center gap-2"
+                onClick={() => window.location.href = '/history'}
+              >
+                <History className="h-4 w-4" />
+                View History
+              </Button>
+            </div>
             <p className="text-gray-500">
               Submit your maintenance or repair request below
             </p>
